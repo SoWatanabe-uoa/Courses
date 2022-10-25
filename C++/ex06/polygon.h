@@ -1,24 +1,26 @@
 #ifndef POLYGON_H
-#define POLYGON_H
+#define ROLYGON_H
 
 #include <string>
-#include "Shape2D.h"
-#include "Point2D.h"
+#include <iostream>
+#include "shape.h"
+#include "point.h"
 
-class Polygon : public Shape2D {
+class Polygon : public Shape {
     public:
-    Polygon(const Point2D*, int);
-    ~Polygon();
-
+    Polygon();
+    Polygon(Point*, int);
+    Polygon(const Polygon&);
+    //Inherited methods
     std::string get_name() const override;
-
     float compute_area() const override;
-
-    void translate(float tx, float ty) override;
+    Polygon* create() const override;
+    Polygon* clone() const override;
+    ~Polygon() override;
 
     private:
-    Point2D* P;
-    int N;
+    Point* _vertices;
+    int _num_vertices;
 };
 
 #endif

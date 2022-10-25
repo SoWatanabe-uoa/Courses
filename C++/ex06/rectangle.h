@@ -2,6 +2,7 @@
 #define RECTANGLE_H
 
 #include <string>
+#include <iostream>
 #include "shape.h"
 #include "point.h"
 
@@ -10,12 +11,12 @@ class Rectangle : public Shape {
     Rectangle();
     Rectangle(Point, float, float);
     Rectangle(const Rectangle&);
-
+    //Inherited methods
     std::string get_name() const override;
     float compute_area() const override;
-    Shape* create() const override;
-    Shape* clone() const override;
-    ~Shape2D() override;
+    Rectangle* create() const override;
+    Rectangle* clone() const override;
+    ~Rectangle() override;
 
     private:
     Point _left_corner;

@@ -1,31 +1,38 @@
-#include "Polygon.h"
+#include "polygon.h"
 
-Polygon::Polygon(const Point2D* v, int n): P(new Point2D[n]),N(n) {
-    for(int i=0; i < n; i++) P[i] = v[i];
+Polygon::Polygon(): _vertices(nullptr), _num_vertices(0) {}
+
+Polygon::Polygon(Point* vertices, int num_vertices): _vertices(new Point[num_vertices]), _num_vertices(num_vertices) {
+    for(int i=0; i<num_vertices; i++) _vertices[i] = vertices[i];
 }
 
-Polygon::~Polygon(){
-    delete[] P;
-}
+Polygon::Polygon(const Polygon& anotherPoly):
+ _vertices(new Point[anotherPoly._num_vertices]), _num_vertices(anotherPoly._num_vertices) {
+    for(int i=0; i<anotherPoly._num_vertices; i++) _vertices[i] = anotherPoly._vertices[i];
+ }
 
-std::string Polygon::get_name() const {
+std::string Polygon::get_name() const{
     return "polygon";
 }
 
-float Polygon::compute_area() const {
-    float area = 0.0f;
-    int next=-1;
-    for(int i=0; i <= N-1; i++){
-        if(next == N-1) next = 0;
-        else next = i+1;
-        area += P[i].get_x() * P[next].get_y() - P[i].get_y() * P[next].get_x();
+float Polygon::compute_area() const{
+    float area=0.f;
+    for(int i=0; i<_num_vertices; i++){
+        area += _vertices[i].get_x() * _vertices[(i+1)%_num_vertices].get_y() -
+        _vertices[i].get_y() * _vertices[(i+1)%_num_vertices].get_x();
     }
-    return area / 2.0f;
+    return area / 2.f;
 }
 
-void Polygon::translate(float tx, float ty) {
-    for(int i=0; i < N; i++){
-        P[i].set_x(P[i].get_x() + tx);
-        P[i].set_y(P[i].get_y() + ty);
-    }
+Polygon* Polygon::create() const{
+    return new Polygon();
+}
+
+Polygon* Polygon::clone() const {
+    return new Polygon(*this);
+}
+
+Polygon::~Polygon() {
+    delete[] _vertices;
+    std::cout << "Polygon instance deleted" << std::endl;
 }

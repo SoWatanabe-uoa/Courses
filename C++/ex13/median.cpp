@@ -15,9 +15,11 @@ float compute_median(std::vector<float>& v){
     int mid = v.size()/2;
     printVec(v);
     if(mid%2){
-        std::nth_element(v.begin(), v.begin()+mid-1, v.end());
+        std::nth_element(v.begin(), v.begin()+mid, v.end());
+        int m = v[mid];
+        std::nth_element(v.begin(), v.begin() + mid - 1,v.end();
         printVec(v);
-        return 0.5f*(v[mid-1]+v[mid]);
+        return 0.5f*(v[mid-1]+m);
     }
     else{
         std::nth_element(v.begin(), v.begin()+mid, v.end());

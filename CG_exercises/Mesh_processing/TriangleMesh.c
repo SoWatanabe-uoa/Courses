@@ -202,6 +202,9 @@ void computeTriangleNormals(TriangleMesh* tri_mesh)
 void computeVertexNormals(TriangleMesh* tri_mesh)
 {
     int i;
+    Vector3 cross;
+    Vector3 P1, P2, P3, P2_1, P3_1;
+    float area = 1;
 
     computeTriangleNormals(tri_mesh);
 
@@ -211,7 +214,7 @@ void computeVertexNormals(TriangleMesh* tri_mesh)
     memset(tri_mesh->_vertex_normals, 0, tri_mesh->_number_vertices * sizeof(Vector3));
 
     // compute each vertex normal as a weighted average of the adjacent face normals 
-    // uniform weight of Area(f)
+    // uniform weight of 1.0
     int nt = tri_mesh->_number_triangles;
     for (i = 0; i < nt; ++i) {
         Vector3 n_tri = tri_mesh->_triangle_normals[i];
@@ -220,23 +223,21 @@ void computeVertexNormals(TriangleMesh* tri_mesh)
         int v0 = t._v0;
         int v1 = t._v1;
         int v2 = t._v2;
-        
-        //Calculate weighted normals
-        Vector3 p0 = tri_mesh->_vertices[v0];
-        Vector3 p1 = tri_mesh->_vertices[v1];
-        Vector3 p2 = tri_mesh->_vertices[v2];
-        Vector3 p0p1; sub(p1, p0, &p0p1);
-        Vector3 p0p2; sub(p2, p0, &p0p2);
-        Vector3 fn; computeCrossProduct(p0p1, p0p2, &fn);
-        float norm;
-        computeNorm(fn,&norm);
-        float area = 0.5*norm;
-        Vector3 weighted_normal;
-        mulAV(area,n_tri, &weighted_normal);
+	
+	P1 = tri_mesh->_vertices[v0];
+	P2 = tri_mesh->_vertices[v1];
+	P3 = tri_mesh->_vertices[v2];
+	sub(P2, P1, &P2_1);
+	sub(P3, P1, &P3_1);
+	computeCrossProduct(P2_1, P3_1, &cross);
+	computeNorm(cross, &area);
+	area = area/2;
 
-        add(tri_mesh->_vertex_normals[v0], weighted_normal, &(tri_mesh->_vertex_normals[v0]));
-        add(tri_mesh->_vertex_normals[v1], weighted_normal, &(tri_mesh->_vertex_normals[v1]));
-        add(tri_mesh->_vertex_normals[v2], weighted_normal, &(tri_mesh->_vertex_normals[v2]));
+	mulAV(area, n_tri, &n_tri);
+
+        add(tri_mesh->_vertex_normals[v0], n_tri, &(tri_mesh->_vertex_normals[v0]));
+        add(tri_mesh->_vertex_normals[v1], n_tri, &(tri_mesh->_vertex_normals[v1]));
+        add(tri_mesh->_vertex_normals[v2], n_tri, &(tri_mesh->_vertex_normals[v2]));
     }
 
     // normalize
@@ -429,91 +430,59 @@ void heatStep(TriangleMesh* tri_mesh) {
     // Try to implement the mesh smoothing method described on p. 40-43 of the slides. 
     // The umbrella operator (p. 42) is sufficient here.
 
-  int num_ver = tri_mesh->_number_vertices;
-  Vector3 L_vi; //vi after the execution of Umbrella operator
-  Vector3 sumOfAdjacentVertices = {0.f,0.f,0.f}; 
-  float lamda = 0.1f;
+}
 
-  for(int i = 0; i < num_ver; ++i){
-    int num_neighbors = getNumberAdjacentVertices(tri_mesh, i);
-    Vector3 pi = tri_mesh->_vertices[i];
 
-    // Loop through each neighbor
-    int j;
-    for (j = 0; j < num_neighbors; ++j) {
-      // Index in the vertex list of the j-th neighbor
-      int vj = getAdjacentVertex(tri_mesh, i, j);
-      // Get the coordinates of this vertex
-      Vector3 pj = tri_mesh->_vertices[vj];
-      add(pj, sumOfAdjacentVertices, &sumOfAdjacentVertices);
-    }
-    
-    //Compute lamda * L_vi
-    mulAV(1.f/(float)num_neighbors, sumOfAdjacentVertices, &L_vi);
-    sub(L_vi, pi, &L_vi);
-    mulAV(lamda, L_vi, &L_vi);
-
-    //Update vi
-    add(pi, L_vi, &tri_mesh->_vertices[i]);
-
-    //initialize for computing at next vertex
-    mulAV(0.f, sumOfAdjacentVertices, &sumOfAdjacentVertices);
-  }
+void DFS(TriangleMesh* mesh, int i, int c){
+  // Assume that: TriangleMesh* tri_mesh is a pointer 
+  // to a valid triangle mesh. 
+  //
+  // Get the number of vertices adjacent to the vertex i
+  int num_neighbors = getNumberAdjacentVertices(mesh, i);
   
-  //recompute the normals
-  computeTriangleNormals(tri_mesh);
-  computeVertexNormals(tri_mesh);
+  // Loop through each neighbor
+  int j;
+  for (j = 0; j < num_neighbors; ++j) {
+    // Index in the vertex list of the j-th neighbor to the vertex i
+    int vj = getAdjacentVertex(mesh, i, j);
+    if(mesh->_component[vj] == -1){
+      mesh->_component[vj] = c;
+      DFS(mesh, vj, c);
+    }
+  } 
 }
 
 
 // Complete
 // Compute the number of connected components and assign a unique component 
 // index to each vertex 
-void computeConnectedComponents(TriangleMesh* mesh) {
-    int i, curr_connected_component=0;
-
-    // Allocate memory and initialize
-    if (mesh->_connected_components && mesh->_visited){
-        free(mesh->_connected_components);
-        free(mesh->_visited);
-    }
-    mesh->_connected_components = (int*)malloc(mesh->_number_vertices * sizeof(int));
-    for(i = 0; i < mesh->_number_vertices; ++i){
-        mesh->_connected_components[i] = EMPTY;
-    }
-    mesh->_visited = (int*)malloc(mesh->_number_vertices * sizeof(int));
-    for(i = 0; i < mesh->_number_vertices; ++i){
-        mesh->_visited[i] = UNVISITED;
-    }
-    
-    // Traverse the different connected components of the triangle mesh,
+void computeConnectedComponents(TriangleMesh* mesh) { 
+    // Complete 
+    // Traverse the different connected components of the triangle mesh, 
     // and assign an index (unique for each component) to the corresponding vertices.
-    for(i = 0; i < mesh->_number_vertices; ++i){
-        if(DFS(mesh,i,curr_connected_component)) curr_connected_component++;
-    }
+  
+  int i;
+  int c = 0;//現在の連結部分のindex
+  
+  if (mesh->_component){
+    free(mesh->_component);
+  }
+    mesh->_component = (int*)malloc(mesh->_number_vertices * sizeof(int));
     
-    //printf("A%d ",curr_connected_component);
-    //for(i = 0; i < mesh->_number_vertices; ++i){
-    //    printf("%d ",mesh->_connected_components[i]);
-    //}
+    for(i = 0; i < mesh->_number_vertices; i++){
+      mesh->_component[i] = -1;
+    }
+
+
+  for(i = 0; i < mesh->_number_vertices; i++){
+
+    if(mesh->_component[i] == -1){
+      DFS(mesh, i, c);
+      c++;
+    }
+  }
 }
 
-// If the vertex vidx is adjacent to any unvisited vertex, return 1. Otherwise, return 0.
-int DFS(TriangleMesh* mesh, int vidx, int curr_connected_component){
-    int adjacent_flag = 0;
-    mesh->_visited[vidx] = VISITED;
-    if(mesh->_connected_components[vidx] == EMPTY)
-        mesh->_connected_components[vidx] = curr_connected_component;
-    int num_neighbors = getNumberAdjacentVertices(mesh, vidx);
-    for (int j = 0; j < num_neighbors; ++j) {
-      int vj = getAdjacentVertex(mesh, vidx, j);
-      if( mesh->_visited[vj] == UNVISITED){
-          adjacent_flag = 1;
-          DFS(mesh,vj,curr_connected_component);
-      }
-    }
-    return adjacent_flag;
-}
 
 // Complete 
 // Compute the color of a given vertex index based on the connected component 
@@ -522,27 +491,65 @@ void getComponentColor(TriangleMesh* mesh, int vidx, float* color) {
     // Complete 
     // Return the color (in the argument 'color') of a given vertex (corresponding to the index 'vidx') 
     // based on its component index.
-    switch (mesh->_connected_components[vidx]) {
-            // We assume there are 3 kinds of color
-        case 0:
-            color[0] = 1.f;
-            color[1] = 0.f;
-            color[2] = 0.f;
-            break;
-        case 1:
-            color[0] = 0.f;
-            color[1] = 1.f;
-            color[2] = 0.f;
-            break;
-        case 2:
-            color[0] = 0.f;
-            color[1] = 0.f;
-            color[2] = 1.f;
-            break;
-        default:
-            color[0] = 0.f;
-            color[1] = 0.f;
-            color[2] = 0.f;
-            break;
+
+  float color1[3] = {1.0, 0.5, 0.5};
+  float color2[3] = {0.5, 1.0, 0.5};
+  float color3[3] = {0.5, 0.5, 1.0};
+  float color4[3] = {0.5, 0.5, 0.5};
+  float color5[3] = {1.0, 1.0, 0.5};
+  float color6[3] = {0.5, 1.0, 1.0};
+  float color7[3] = {1.0, 0.5, 1.0};
+
+  int index = mesh->_component[vidx];
+  int i;
+  
+  switch (index){
+  case 0:
+    for(i = 0; i < 3; i++){
+      color[i] = color1[i];
     }
+    break;
+    
+  case 1:
+    for(i = 0; i < 3; i++){
+      color[i] = color2[i];
+    }
+    break;
+    
+  case 2:
+    for(i = 0; i < 3; i++){
+      color[i] = color3[i];
+    }
+    break;
+    
+  case 3:
+    for(i = 0; i < 3; i++){
+      color[i] = color4[i];
+    }
+    break;
+    
+  case 4:
+    for(i = 0; i < 3; i++){
+      color[i] = color5[i];
+    }
+    break;
+    
+  case 5:
+    for(i = 0; i < 3; i++){
+      color[i] = color6[i];
+    }
+    break;
+    
+  case 6:
+    for(i = 0; i < 3; i++){
+      color[i] = color7[i];
+    }
+    break;
+    
+  default:
+    for(i = 0; i < 3; i++){
+      color[i] = 0;
+    }
+    break;
+  }
 }

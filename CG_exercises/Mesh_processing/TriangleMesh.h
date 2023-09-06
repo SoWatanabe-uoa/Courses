@@ -4,9 +4,6 @@
 #ifndef TRIANGLE_MESH_H
 #define TRIANGLE_MESH_H
 
-#define EMPTY -1
-
-enum {VISITED, UNVISITED};
 
 struct _Triple {
   int _v0;
@@ -25,12 +22,12 @@ struct _TriangleMesh {
 	
   Vector3* _triangle_normals;
   Vector3* _vertex_normals;
-  int*  _visited;
-  int*  _connected_components;
 
   // vertex - vertex adjacency
   int* _number_adj_vertices;
   int** _adj_vertices;
+  
+  int* _component;
 };
 
 typedef struct _TriangleMesh TriangleMesh;
@@ -92,8 +89,6 @@ void heatStep(TriangleMesh* tri_mesh);
 // Compute the number of connected components and assign a unique component 
 // index to each vertex 
 void computeConnectedComponents(TriangleMesh* mesh);
-
-int DFS(TriangleMesh* mesh, int vidx, int curr_connected_component);
 
 // Compute the color of a given vertex index based on the connected component 
 // that it belongs to

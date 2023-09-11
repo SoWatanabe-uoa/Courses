@@ -15,8 +15,8 @@ public class DBAccess {
     String PROPATIES = "?characterEncoding=UTF-8&serverTimezone=JST";
     String URL = "jdbc:mySQL://localhost/" + DATABASE_NAME+PROPATIES;
     //User constant for D
-    String USER = "ie04";
-    String PASS = "Watching_4";
+    String USER = "aaaa";
+    String PASS = "password";
   //Connect to MySQL
     Class.forName("com.mysql.cj.jdbc.Driver");
     conn = DriverManager.getConnection(URL, USER, PASS);
